@@ -1,0 +1,2 @@
+class NoChainResultException(Exception):
+    pass

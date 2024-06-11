@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Car battery tracker</title>
+    <script
+      type="text/javascript"
+      src="https://www.gstatic.com/charts/loader.js"
+    ></script>
+  </head>
+  <body>
+    <div class="voltageContainer">
+      <strong>Last voltage</strong>
+      <span class="voltageText" id="lastVoltageSpan">? V</span>
+    </div>
+    <div class="chartContainer">
+      <div class="chart" id="measuresChart"></div>
+    </div>
+    <script>
+      var $ = (query) => {
+        if (query.charAt(0) === "#")
+          return document.getElementById(query.substr(1));
+        return document.querySelector(query);
+      };
+
+      // Only for templating
+      var html = String.raw;
+
+      const getMeasures = async () => {
+        const response = await fetch(`http://${window.location.host}/measures`);
+        return await response.json();
+      };
+
+      const drawChart = (measures) => {
+        // Set Data
+        const data = new google.visualization.DataTable();
+        data.addColumn("date", "Date");
+        data.addColumn("number", "Voltage");
+        data.addRows(
+          measures.map((x) => [new Date(x.timestamp + "Z"), x.voltage])
+        );
+
+        // Set Options
+        const options = {
+          title: "Voltage along time",
+        };
+
+        // Draw
+        const chart = new google.visualization.LineChart(
+          document.getElementById("measuresChart")
+        );
+        chart.draw(data, options);
+      };
+
+      const onTick = async () => {
+        const measures = await getMeasures();
+        if (measures.length == 0) return;
+        const lastVoltageSpan = $("#lastVoltageSpan");
+        lastVoltageSpan.innerHTML = `${
+          measures[measures.length - 1].voltage
+        } V`;
+        drawChart(measures);
+      };
+
+      const onStart = async () => {
+        google.charts.load("current", { packages: ["corechart"] });
+
+        const startGettingMeasures = async () => {
+          await onTick();
+          setInterval(onTick, 5000);
+        };
+
+        // Set a callback to run when the Google Visualization API is loaded.
+        google.charts.setOnLoadCallback(startGettingMeasures);
+      };
+
+      onStart();
+    </script>
+    <style>
+      html {
+        height: 100%;
+        font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
+          "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        justify-content: center;
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        margin: 1rem;
+        height: -moz-available; /* WebKit-based browsers will ignore this. */
+        height: -webkit-fill-available; /* Mozilla-based browsers will ignore this. */
+        height: fill-available;
+      }
+
+      .voltageContainer {
+        margin-top: 1rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        font-size: 2rem;
+        border-radius: 10px;
+        border: 1px solid rgb(99, 99, 99);
+        background-color: rgb(226, 226, 226);
+        padding: 1rem;
+      }
+
+      .voltageText {
+        color: rgb(0, 190, 6);
+      }
+
+      .chartContainer {
+        display: flex;
+        width: -moz-available; /* WebKit-based browsers will ignore this. */
+        width: -webkit-fill-available; /* Mozilla-based browsers will ignore this. */
+        width: fill-available;
+        height: -moz-available; /* WebKit-based browsers will ignore this. */
+        height: -webkit-fill-available; /* Mozilla-based browsers will ignore this. */
+        height: fill-available;
+      }
+
+      .chart {
+        flex: 1;
+      }
+    </style>
+  </body>
+</html>
